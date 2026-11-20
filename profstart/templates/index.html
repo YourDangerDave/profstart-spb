@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Профстарт — Навигатор по характерам, профессиям и вузам СПб</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <!-- Декоративный фон космоса: не перехватывает клики и не влияет на скролл -->
+  <div class="cosmos-layer" aria-hidden="true">
+    <svg class="cosmos-svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="nebulaViolet" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#a855f7" stop-opacity="0.34" />
+          <stop offset="60%" stop-color="#6d28d9" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="#6d28d9" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="nebulaCyan" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.28" />
+          <stop offset="65%" stop-color="#0891b2" stop-opacity="0.1" />
+          <stop offset="100%" stop-color="#0891b2" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="planetIce" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#a5f3fc" />
+          <stop offset="55%" stop-color="#22d3ee" />
+          <stop offset="100%" stop-color="#1e1b4b" />
+        </radialGradient>
+        <radialGradient id="planetAmethyst" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#e9d5ff" />
+          <stop offset="55%" stop-color="#9333ea" />
+          <stop offset="100%" stop-color="#1e1035" />
+        </radialGradient>
+        <linearGradient id="galaxyArm" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#c084fc" stop-opacity="0.55" />
+          <stop offset="50%" stop-color="#67e8f9" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#a855f7" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+
+      <!-- Туманности -->
+      <ellipse cx="230" cy="210" rx="340" ry="220" fill="url(#nebulaViolet)" />
+      <ellipse cx="1180" cy="190" rx="320" ry="200" fill="url(#nebulaCyan)" />
+      <ellipse cx="960" cy="690" rx="360" ry="230" fill="url(#nebulaViolet)" />
+
+      <!-- Далёкая галактика в верхнем правом углу -->
+      <g transform="translate(1160, 150) rotate(-24)" opacity="0.72">
+        <ellipse cx="0" cy="0" rx="92" ry="24" fill="url(#galaxyArm)" />
+        <ellipse cx="0" cy="0" rx="54" ry="12" stroke="#e0f2fe" stroke-opacity="0.35" stroke-width="1.2" fill="none" />
+        <circle cx="0" cy="0" r="8" fill="#fef9c3" fill-opacity="0.85" />
+      </g>
+
+      <!-- Далёкая спиральная туманность внизу слева -->
+      <g transform="translate(190, 720) rotate(18)" opacity="0.6">
+        <ellipse cx="0" cy="0" rx="74" ry="19" fill="url(#galaxyArm)" />
+        <circle cx="0" cy="0" r="6" fill="#f3e8ff" fill-opacity="0.8" />
+      </g>
+
+      <!-- Небольшая бирюзовая планета -->
+      <g transform="translate(1250, 440)">
+        <circle cx="0" cy="0" r="28" fill="url(#planetIce)" />
+        <path d="M-24 -8 A28 28 0 0 1 14 -24" stroke="#cffafe" stroke-opacity="0.45" stroke-width="2" fill="none" />
+      </g>
+
+      <!-- Небольшая фиолетовая планета с кольцом -->
+      <g transform="translate(145, 430) rotate(-16)">
+        <ellipse cx="0" cy="2" rx="44" ry="10" stroke="#c4b5fd" stroke-opacity="0.45" stroke-width="2.2" fill="none" />
+        <circle cx="0" cy="0" r="21" fill="url(#planetAmethyst)" />
+        <path d="M-38 1 A44 10 0 0 0 38 3" stroke="#67e8f9" stroke-opacity="0.4" stroke-width="1.8" fill="none" />
+      </g>
+
+      <!-- Маленькая далёкая планета -->
+      <circle cx="760" cy="110" r="11" fill="url(#planetIce)" opacity="0.75" />
+
+      <!-- Россыпь звёзд -->
+      <g fill="#ffffff">
+        <circle cx="95" cy="95" r="1.4" opacity="0.85" />
+        <circle cx="340" cy="72" r="1.1" opacity="0.65" />
+        <circle cx="510" cy="155" r="1.8" opacity="0.9" />
+        <circle cx="635" cy="64" r="1.2" opacity="0.7" />
+        <circle cx="890" cy="180" r="1.5" opacity="0.8" />
+        <circle cx="1360" cy="95" r="1.7" opacity="0.85" />
+        <circle cx="82" cy="590" r="1.3" opacity="0.75" />
+        <circle cx="420" cy="520" r="1.1" opacity="0.6" />
+        <circle cx="690" cy="480" r="1.6" opacity="0.85" />
+        <circle cx="1040" cy="540" r="1.2" opacity="0.7" />
+        <circle cx="1320" cy="760" r="1.8" opacity="0.9" />
+        <circle cx="560" cy="810" r="1.3" opacity="0.75" />
+        <circle cx="840" cy="840" r="1.1" opacity="0.65" />
+        <circle cx="1120" cy="310" r="1.2" opacity="0.7" />
+        <circle cx="290" cy="315" r="1.5" opacity="0.8" />
+      </g>
+    </svg>
+  </div>
+
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a href="#" class="brand">
+        <span class="logo-mark" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="11" fill="url(#logoGrad)" />
+            <ellipse cx="18" cy="18" rx="12" ry="5.5" transform="rotate(-28 18 18)" stroke="rgba(255,255,255,0.45)" stroke-width="1.4" />
+            <path d="M23.5 10.5C23.5 10.5 24.8 15.2 21.4 18.6C18 22 13.3 20.7 13.3 20.7C13.3 20.7 14.6 16 18 12.6C21.4 9.2 23.5 10.5 23.5 10.5Z" fill="#FFFFFF" />
+            <circle cx="20.6" cy="13.4" r="1.5" fill="#4F46E5" />
+            <circle cx="11.5" cy="11" r="1.2" fill="#A5F3FC" />
+            <circle cx="26.5" cy="24.5" r="1.3" fill="#FDE68A" />
+            <defs>
+              <linearGradient id="logoGrad" x1="2" y1="2" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7c3aed" />
+                <stop offset="1" stop-color="#06b6d4" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+        <div>
+          <div class="brand-title-row">
+            <strong>ПРОФСТАРТ</strong>
+            <span class="spb-pill">СПб</span>
+          </div>
+          <p class="subtitle">Характер, склонности и вузы Петербурга</p>
+        </div>
+      </a>
+      <a href="#test-form" class="btn btn-small">К вопросам</a>
+    </div>
+  </header>
+
+  <main class="container main-grid">
+    <section class="card hero-card">
+      <span class="eyebrow">Санкт-Петербург · без скучных тестов «кем хочешь быть»</span>
+      <h1>Пойми, что подходит твоему характеру — и куда идти в СПб</h1>
+      <p>
+        Вместо банальных вопросов про любимые уроки смотрим, как ты думаешь, реагируешь на затыки,
+        общаешься и берёшься за дела. На выходе — живой разбор личности, роли и вузы Петербурга, куда реально стоит присмотреться.
+      </p>
+      <div class="hero-stats">
+        <div class="stat-box">
+          <strong>15</strong>
+          <span>вопросов про характер и привычки</span>
+        </div>
+        <div class="stat-box">
+          <strong>5</strong>
+          <span>сфер и треков развития</span>
+        </div>
+        <div class="stat-box">
+          <strong>СПб</strong>
+          <span>вузы и примерные направления</span>
+        </div>
+      </div>
+    </section>
+
+    {% if result %}
+    <section class="card result-card" id="result-section">
+      <div class="result-header">
+        <span class="tag">Разбор готов</span>
+        <h2>Больше всего откликается: {{ result.top_profile.title }} ({{ result.top_profile.percent }}%)</h2>
+      </div>
+      <p class="summary-text">{{ result.summary }}</p>
+
+      <div class="portrait-box">
+        <h3>Что это говорит о твоём характере</h3>
+        <p>{{ result.personality_portrait }}</p>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-box">
+          <h3>Как это устроено в Петербурге</h3>
+          <p>{{ result.top_profile.spb_focus }}</p>
+        </div>
+        <div class="info-box info-box-alt">
+          <h3>Если смотреть на «{{ result.track_goal }}»</h3>
+          <p>{{ result.top_profile.track_tip }}</p>
+        </div>
+      </div>
+
+      <div class="uni-section">
+        <h3>ВУЗы Санкт-Петербурга и примерные направления</h3>
+        <div class="uni-grid">
+          {% for uni in result.top_profile.universities %}
+            <div class="uni-card">
+              <strong>{{ uni.name }}</strong>
+              <p>{{ uni.programs }}</p>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="roles-wrap">
+        <h3>Кем можно работать в этом направлении</h3>
+        <div class="chips">
+          {% for role in result.top_profile.roles %}
+            <span class="chip">{{ role }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if result.matched_keywords %}
+      <p class="meta-note">
+        Зацепили слова из твоего ответа: <strong>{{ result.matched_keywords | join(', ') }}</strong>
+      </p>
+      {% endif %}
+
+      <div class="bars">
+        <h3>Как распределились все 5 направлений</h3>
+        {% for item in result.breakdown %}
+          <div class="bar-row">
+            <div class="bar-label">
+              <span>{{ item.title }}</span>
+              <strong>{{ item.percent }}%</strong>
+            </div>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: {{ item.percent }}%;"></div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="card" id="test-form">
+      <div class="section-head">
+        <div>
+          <h2>15 вопросов о тебе</h2>
+          <p class="muted">Отвечай как есть: 1 — вообще не про меня, 5 — прям в точку.</p>
+        </div>
+      </div>
+
+      <form action="{{ url_for('analyze') }}" method="POST" class="form-stack">
+        <div class="row-3">
+          <label class="field">
+            <span>Как тебя зовут / ник</span>
+            <input
+              type="text"
+              name="student_name"
+              placeholder="Например, Эва"
+              value="{{ form_data.student_name or '' }}"
+            />
+          </label>
+
+          <label class="field">
+            <span>Сейчас ты в...</span>
+            <select name="grade">
+              {% for g in ['8 класс', '9 класс', '10 класс', '11 класс', 'СПО'] %}
+                <option value="{{ g }}" {% if form_data.grade == g %}selected{% endif %}>{{ g }}</option>
+              {% endfor %}
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Куда метишь пока?</span>
+            <select name="track_goal">
+              {% for opt in track_options %}
+                <option value="{{ opt }}" {% if form_data.track_goal == opt %}selected{% endif %}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+          </label>
+        </div>
+
+        <div class="questions-list">
+          {% for q_id, _, question in questions %}
+            {% set current_val = (form_data.answers[q_id] if form_data.answers else 3) %}
+            <div class="question-item">
+              <p class="question-text"><span class="q-num">{{ loop.index }}.</span> {{ question }}</p>
+              <div class="scale-group">
+                {% for num in range(1, 6) %}
+                  <label class="scale-pill">
+                    <input
+                      type="radio"
+                      name="{{ q_id }}"
+                      value="{{ num }}"
+                      {% if current_val == num %}checked{% endif %}
+                    />
+                    <span>{{ num }}</span>
+                  </label>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+        <label class="field">
+          <span>Пару слов от себя: что тебя бесит, что зажигает и чего хочется от жизни/учёбы?</span>
+          <textarea
+            name="open_answer"
+            rows="3"
+            placeholder="Например: бесит пустая болтовня без дела, нравится придумывать визуал и разбираться в сложных штуках..."
+          >{{ form_data.open_answer or '' }}</textarea>
+        </label>
+
+        <button type="submit" class="btn btn-primary">Собрать разбор и подобрать вузы СПб</button>
+      </form>
+    </section>
+
+    <section class="card history-card">
+      <div class="history-top">
+        <h2>Кто уже проходил</h2>
+        {% if recent %}
+          <form action="{{ url_for('clear_history') }}" method="POST">
+            <button type="submit" class="btn btn-danger-soft">Очистить список</button>
+          </form>
+        {% endif %}
+      </div>
+
+      {% if recent %}
+        <ul class="history-list">
+          {% for item in recent %}
+            <li>
+              <div>
+                <strong>{{ item.student_name }}</strong>
+                <span class="muted">({{ item.grade }})</span>
+              </div>
+              <div class="history-right">
+                <span>{{ item.top_profile_title }}</span>
+                <strong class="badge-percent">{{ item.top_percent }}%</strong>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Тут пока пусто — будешь первой.</p>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>
