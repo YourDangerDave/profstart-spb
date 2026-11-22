@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 <body>
-  <!-- Декоративный фон космоса: не перехватывает клики и не влияет на скролл -->
   <div class="cosmos-layer" aria-hidden="true">
     <svg class="cosmos-svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -38,41 +37,34 @@
         </linearGradient>
       </defs>
 
-      <!-- Туманности -->
       <ellipse cx="230" cy="210" rx="340" ry="220" fill="url(#nebulaViolet)" />
       <ellipse cx="1180" cy="190" rx="320" ry="200" fill="url(#nebulaCyan)" />
       <ellipse cx="960" cy="690" rx="360" ry="230" fill="url(#nebulaViolet)" />
 
-      <!-- Далёкая галактика в верхнем правом углу -->
       <g transform="translate(1160, 150) rotate(-24)" opacity="0.72">
         <ellipse cx="0" cy="0" rx="92" ry="24" fill="url(#galaxyArm)" />
         <ellipse cx="0" cy="0" rx="54" ry="12" stroke="#e0f2fe" stroke-opacity="0.35" stroke-width="1.2" fill="none" />
         <circle cx="0" cy="0" r="8" fill="#fef9c3" fill-opacity="0.85" />
       </g>
 
-      <!-- Далёкая спиральная туманность внизу слева -->
       <g transform="translate(190, 720) rotate(18)" opacity="0.6">
         <ellipse cx="0" cy="0" rx="74" ry="19" fill="url(#galaxyArm)" />
         <circle cx="0" cy="0" r="6" fill="#f3e8ff" fill-opacity="0.8" />
       </g>
 
-      <!-- Небольшая бирюзовая планета -->
       <g transform="translate(1250, 440)">
         <circle cx="0" cy="0" r="28" fill="url(#planetIce)" />
         <path d="M-24 -8 A28 28 0 0 1 14 -24" stroke="#cffafe" stroke-opacity="0.45" stroke-width="2" fill="none" />
       </g>
 
-      <!-- Небольшая фиолетовая планета с кольцом -->
       <g transform="translate(145, 430) rotate(-16)">
         <ellipse cx="0" cy="2" rx="44" ry="10" stroke="#c4b5fd" stroke-opacity="0.45" stroke-width="2.2" fill="none" />
         <circle cx="0" cy="0" r="21" fill="url(#planetAmethyst)" />
         <path d="M-38 1 A44 10 0 0 0 38 3" stroke="#67e8f9" stroke-opacity="0.4" stroke-width="1.8" fill="none" />
       </g>
 
-      <!-- Маленькая далёкая планета -->
       <circle cx="760" cy="110" r="11" fill="url(#planetIce)" opacity="0.75" />
 
-      <!-- Россыпь звёзд -->
       <g fill="#ffffff">
         <circle cx="95" cy="95" r="1.4" opacity="0.85" />
         <circle cx="340" cy="72" r="1.1" opacity="0.65" />
@@ -95,7 +87,7 @@
 
   <header class="topbar">
     <div class="container topbar-inner">
-      <a href="#" class="brand">
+      <a href="{{ url_for('index') }}" class="brand">
         <span class="logo-mark" aria-hidden="true">
           <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="36" height="36" rx="11" fill="url(#logoGrad)" />
@@ -117,36 +109,33 @@
             <strong>ПРОФСТАРТ</strong>
             <span class="spb-pill">СПб</span>
           </div>
-          <p class="subtitle">Характер, склонности и вузы Петербурга</p>
+          <p class="subtitle">Характер, склонности, классы и вузы Петербурга</p>
         </div>
       </a>
-      <a href="#test-form" class="btn btn-small">К вопросам</a>
+
+      <div class="topbar-actions">
+        {% if user %}
+          <span class="user-chip">
+            {{ avatar_map.get(user.avatar_id, {}).get('emoji', '🦉') }}
+            {{ user.full_name }} · {{ 'Учитель' if user.role == 'teacher' else 'Ученик' }}
+          </span>
+          <form action="{{ url_for('logout') }}" method="POST" class="inline-form">
+            <button type="submit" class="btn btn-small">Выйти</button>
+          </form>
+        {% else %}
+          <a href="{{ url_for('index', view='guest_test') }}" class="btn btn-small">Гостевой тест</a>
+        {% endif %}
+      </div>
     </div>
   </header>
 
   <main class="container main-grid">
-    <section class="card hero-card">
-      <span class="eyebrow">Санкт-Петербург · без скучных тестов «кем хочешь быть»</span>
-      <h1>Пойми, что подходит твоему характеру — и куда идти в СПб</h1>
-      <p>
-        Вместо банальных вопросов про любимые уроки смотрим, как ты думаешь, реагируешь на затыки,
-        общаешься и берёшься за дела. На выходе — живой разбор личности, роли и вузы Петербурга, куда реально стоит присмотреться.
-      </p>
-      <div class="hero-stats">
-        <div class="stat-box">
-          <strong>15</strong>
-          <span>вопросов про характер и привычки</span>
-        </div>
-        <div class="stat-box">
-          <strong>5</strong>
-          <span>сфер и треков развития</span>
-        </div>
-        <div class="stat-box">
-          <strong>СПб</strong>
-          <span>вузы и примерные направления</span>
-        </div>
-      </div>
-    </section>
+    {% if notice %}
+      <div class="alert alert-info">{{ notice }}</div>
+    {% endif %}
+    {% if auth_error %}
+      <div class="alert alert-error">{{ auth_error }}</div>
+    {% endif %}
 
     {% if result %}
     <section class="card result-card" id="result-section">
@@ -184,6 +173,17 @@
         </div>
       </div>
 
+      {% if result.full_advice %}
+      <div class="advice-box">
+        <h3>Практические советы</h3>
+        <ul class="advice-list">
+          {% for tip in result.full_advice %}
+            <li>{{ tip }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
       <div class="roles-wrap">
         <h3>Кем можно работать в этом направлении</h3>
         <div class="chips">
@@ -192,12 +192,6 @@
           {% endfor %}
         </div>
       </div>
-
-      {% if result.matched_keywords %}
-      <p class="meta-note">
-        Зацепили слова из твоего ответа: <strong>{{ result.matched_keywords | join(', ') }}</strong>
-      </p>
-      {% endif %}
 
       <div class="bars">
         <h3>Как распределились все 5 направлений</h3>
@@ -216,83 +210,405 @@
     </section>
     {% endif %}
 
-    <section class="card" id="test-form">
-      <div class="section-head">
-        <div>
-          <h2>15 вопросов о тебе</h2>
-          <p class="muted">Отвечай как есть: 1 — вообще не про меня, 5 — прям в точку.</p>
-        </div>
-      </div>
+    {% if active_tab == 'entry' and not user %}
+      <section class="card hero-card">
+        <span class="eyebrow">Выбор режима входа · Санкт-Петербург</span>
+        <h1>Как зайдём на «Профстарт»?</h1>
+        <p>
+          Можно пройти тест как гость — быстрый опрос и разбор без регистрации. А можно зарегистрироваться по номеру телефона
+          с кодом подтверждения как <strong>ученик</strong> или <strong>учитель</strong>, чтобы получить личный кабинет,
+          аватарку-животное, комнаты классов и сохранение истории.
+        </p>
 
-      <form action="{{ url_for('analyze') }}" method="POST" class="form-stack">
-        <div class="row-3">
-          <label class="field">
-            <span>Как тебя зовут / ник</span>
+        <div class="entry-modes">
+          <div class="mode-card">
+            <h3>Режим гостя</h3>
+            <p class="muted">Быстро пройти тест и посмотреть результат с вузами СПб без аккаунта.</p>
+            <a href="{{ url_for('index', view='guest_test') }}" class="btn btn-primary">Войти как гость</a>
+          </div>
+
+          <div class="mode-card mode-card-highlight">
+            <h3>Вход / регистрация по телефону</h3>
+            <p class="muted">Личный кабинет ученика или классного руководителя с кодом подтверждения.</p>
+
+            <form action="{{ url_for('auth_request_code') }}" method="POST" class="form-stack compact-form">
+              <div class="row-2">
+                <label class="field">
+                  <span>Роль</span>
+                  <select name="role">
+                    <option value="student">Ученик</option>
+                    <option value="teacher">Учитель (классный руководитель)</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Имя</span>
+                  <input type="text" name="full_name" placeholder="Например, Эва / Ирина Сергеевна" />
+                </label>
+              </div>
+              <label class="field">
+                <span>Номер телефона</span>
+                <input type="tel" name="phone" placeholder="+7 (999) 123-45-67" required />
+              </label>
+              <button type="submit" class="btn btn-small">Получить код подтверждения</button>
+            </form>
+
+            <form action="{{ url_for('auth_verify') }}" method="POST" class="form-stack compact-form verify-box">
+              <div class="row-2">
+                <label class="field">
+                  <span>Подтверди номер</span>
+                  <input type="tel" name="phone" value="{{ (session.get('pending_auth') or {}).get('phone', '') }}" placeholder="+7 (999) 123-45-67" required />
+                </label>
+                <label class="field">
+                  <span>Код (тест-код: <strong>{{ demo_code }}</strong>)</span>
+                  <input type="text" name="code" placeholder="{{ demo_code }}" maxlength="6" required />
+                </label>
+              </div>
+              <button type="submit" class="btn btn-primary">Подтвердить и открыть кабинет</button>
+            </form>
+          </div>
+        </div>
+      </section>
+    {% endif %}
+
+    {% if user and active_tab == 'cabinet' %}
+      <section class="card cabinet-header">
+        <div class="cabinet-profile-top">
+          <div class="big-avatar">{{ avatar_map.get(user.avatar_id, {}).get('emoji', '🦉') }}</div>
+          <div>
+            <span class="eyebrow">Личный кабинет · {{ 'Учитель' if user.role == 'teacher' else 'Ученик' }}</span>
+            <h1>{{ user.full_name }}</h1>
+            <p class="muted">
+              Тел.: {{ user.phone }}
+              {% if user.email %} · Почта: {{ user.email }}{% endif %}
+              {% if user.role == 'student' %} · {{ user.grade }} · {{ user.track_goal }}{% endif %}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {% if user.role == 'student' %}
+        <section class="card">
+          <h2>Комната класса или независимый режим</h2>
+          {% if joined_room %}
+            <p class="muted">
+              Ты подключён к комнате <strong>«{{ joined_room.title }}»</strong> (код: <strong>{{ joined_room.code }}</strong>).
+              Классный руководитель видит твои результаты и может оставлять для тебя индивидуальные рекомендации.
+            </p>
+          {% else %}
+            <p class="muted">
+              Сейчас ты проходишь тесты <strong>независимо</strong>. Если у классного руководителя есть код комнаты — введи его ниже, либо оставь поле пустым.
+            </p>
+          {% endif %}
+
+          <form action="{{ url_for('classroom_join') }}" method="POST" class="inline-row">
             <input
               type="text"
-              name="student_name"
-              placeholder="Например, Эва"
-              value="{{ form_data.student_name or '' }}"
+              name="classroom_code"
+              value="{{ user.classroom_code or '' }}"
+              placeholder="Код комнаты, например SPB-412-B"
             />
-          </label>
+            <button type="submit" class="btn btn-primary">Сохранить режим</button>
+          </form>
 
-          <label class="field">
-            <span>Сейчас ты в...</span>
-            <select name="grade">
-              {% for g in ['8 класс', '9 класс', '10 класс', '11 класс', 'СПО'] %}
-                <option value="{{ g }}" {% if form_data.grade == g %}selected{% endif %}>{{ g }}</option>
+          {% if guidance %}
+            <div class="guidance-banner">
+              <h3>Требования и советы от классного руководителя ({{ guidance.teacher_name or 'Учитель' }})</h3>
+              <p>{{ guidance.requirement_text }}</p>
+            </div>
+          {% endif %}
+        </section>
+
+        <section class="card">
+          <h2>Мои результаты тестирования</h2>
+          {% if user_assessments %}
+            <div class="results-accordion">
+              {% for item in user_assessments %}
+                {% set is_open = (expanded_assessment and expanded_assessment.id == item.id) %}
+                <div class="result-item-card">
+                  <div class="result-item-head">
+                    <div>
+                      <strong>{{ item.top_profile_title }} — {{ item.top_percent }}%</strong>
+                      <div class="muted small-meta">Дата: {{ item.created_at }} · {{ item.grade }}</div>
+                    </div>
+                    <a
+                      href="{{ url_for('index', open_result=(None if is_open else item.id)) }}#my-results"
+                      class="btn btn-small"
+                    >
+                      {{ 'Скрыть' if is_open else 'Раскрыть' }}
+                    </a>
+                  </div>
+
+                  {% if is_open %}
+                    <div class="expanded-body">
+                      <p>{{ item.summary }}</p>
+                      {% if item.report.personality_portrait %}
+                        <div class="portrait-box">
+                          <h3>Характер и стиль мышления</h3>
+                          <p>{{ item.report.personality_portrait }}</p>
+                        </div>
+                      {% endif %}
+                      {% if item.report.full_advice %}
+                        <div class="advice-box">
+                          <h3>Советы по развитию</h3>
+                          <ul class="advice-list">
+                            {% for tip in item.report.full_advice %}
+                              <li>{{ tip }}</li>
+                            {% endfor %}
+                          </ul>
+                        </div>
+                      {% endif %}
+                      {% if item.report.top_profile and item.report.top_profile.universities %}
+                        <div class="uni-section">
+                          <h3>ВУЗы СПб и примерные направления</h3>
+                          <div class="uni-grid">
+                            {% for uni in item.report.top_profile.universities %}
+                              <div class="uni-card">
+                                <strong>{{ uni.name }}</strong>
+                                <p>{{ uni.programs }}</p>
+                              </div>
+                            {% endfor %}
+                          </div>
+                        </div>
+                      {% endif %}
+                    </div>
+                  {% endif %}
+                </div>
               {% endfor %}
-            </select>
-          </label>
+            </div>
+          {% else %}
+            <p class="muted">Ты ещё не проходил(а) тест в кабинете — заполни форму ниже, чтобы сохранить первый разбор.</p>
+          {% endif %}
+        </section>
+      {% endif %}
 
-          <label class="field">
-            <span>Куда метишь пока?</span>
-            <select name="track_goal">
-              {% for opt in track_options %}
-                <option value="{{ opt }}" {% if form_data.track_goal == opt %}selected{% endif %}>{{ opt }}</option>
-              {% endfor %}
-            </select>
-          </label>
-        </div>
-
-        <div class="questions-list">
-          {% for q_id, _, question in questions %}
-            {% set current_val = (form_data.answers[q_id] if form_data.answers else 3) %}
-            <div class="question-item">
-              <p class="question-text"><span class="q-num">{{ loop.index }}.</span> {{ question }}</p>
-              <div class="scale-group">
-                {% for num in range(1, 6) %}
-                  <label class="scale-pill">
-                    <input
-                      type="radio"
-                      name="{{ q_id }}"
-                      value="{{ num }}"
-                      {% if current_val == num %}checked{% endif %}
-                    />
-                    <span>{{ num }}</span>
-                  </label>
-                {% endfor %}
+      {% if user.role == 'teacher' %}
+        <section class="card">
+          <h2>Комната класса</h2>
+          {% if teacher_room %}
+            <div class="room-badge-box">
+              <div>
+                <strong>{{ teacher_room.title }}</strong>
+                <p class="muted">Код для подключения учеников: <span class="room-code">{{ teacher_room.code }}</span></p>
               </div>
             </div>
-          {% endfor %}
+          {% else %}
+            <p class="muted">Создай комнату класса, чтобы получить индивидуальный код и смотреть результаты учеников.</p>
+          {% endif %}
+
+          <form action="{{ url_for('classroom_create') }}" method="POST" class="inline-row">
+            <input
+              type="text"
+              name="classroom_title"
+              value="{{ teacher_room.title if teacher_room else '' }}"
+              placeholder="Название класса, например: 9 «А» класс, СПб"
+              required
+            />
+            <button type="submit" class="btn btn-primary">
+              {{ 'Обновить комнату' if teacher_room else 'Создать комнату класса' }}
+            </button>
+          </form>
+        </section>
+
+        {% if teacher_room %}
+          <section class="card">
+            <h2>Ученики в комнате ({{ classroom_students|length }}) и корректировка требований</h2>
+            {% if classroom_students %}
+              <div class="students-stack">
+                {% for st in classroom_students %}
+                  <div class="student-row-card">
+                    <div class="student-top">
+                      <div>
+                        <strong>{{ avatar_map.get(st.avatar_id, {}).get('emoji', '🦊') }} {{ st.full_name }}</strong>
+                        <span class="muted">({{ st.grade }} · {{ st.track_goal }})</span>
+                      </div>
+                      {% if st.latest_assessment %}
+                        <span class="badge-percent">
+                          {{ st.latest_assessment.top_profile_title }} · {{ st.latest_assessment.top_percent }}%
+                        </span>
+                      {% else %}
+                        <span class="muted">Тест ещё не пройден</span>
+                      {% endif %}
+                    </div>
+
+                    {% if st.latest_assessment %}
+                      <p class="small-meta muted">
+                        Последнее прохождение: {{ st.latest_assessment.created_at }}. {{ st.latest_assessment.summary }}
+                      </p>
+                    {% endif %}
+
+                    <form action="{{ url_for('classroom_guidance') }}" method="POST" class="form-stack compact-form">
+                      <input type="hidden" name="student_id" value="{{ st.id }}" />
+                      <label class="field">
+                        <span>Индивидуальные требования / ориентиры для ученика с учётом профиля</span>
+                        <textarea
+                          name="requirement_text"
+                          rows="2"
+                          placeholder="Например: подготовить мини-проект по выбранному профилю к пятнице и изучить проходные/профили в вузах СПб..."
+                        >{{ st.requirement_text or '' }}</textarea>
+                      </label>
+                      <button type="submit" class="btn btn-small">Сохранить требования для ученика</button>
+                    </form>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="muted">Пока никто не вошёл по коду <strong>{{ teacher_room.code }}</strong>.</p>
+            {% endif %}
+          </section>
+        {% endif %}
+      {% endif %}
+
+      <section class="card">
+        <h2>Настройки личного кабинета</h2>
+        <form action="{{ url_for('save_profile_settings') }}" method="POST" class="form-stack">
+          <div class="field">
+            <span>Выбери аватарку-животное</span>
+            <div class="avatar-picker">
+              {% for av in avatars %}
+                <label class="avatar-choice">
+                  <input
+                    type="radio"
+                    name="avatar_id"
+                    value="{{ av.id }}"
+                    {% if user.avatar_id == av.id %}checked{% endif %}
+                  />
+                  <span>{{ av.emoji }} {{ av.label }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="row-3">
+            <label class="field">
+              <span>Имя</span>
+              <input type="text" name="full_name" value="{{ user.full_name }}" required />
+            </label>
+            <label class="field">
+              <span>Личная почта</span>
+              <input type="email" name="email" value="{{ user.email or '' }}" placeholder="name@example.com" />
+            </label>
+            <label class="field">
+              <span>Класс / ступень</span>
+              <select name="grade">
+                {% for g in grade_options %}
+                  <option value="{{ g }}" {% if user.grade == g %}selected{% endif %}>{{ g }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+
+          {% if user.role == 'student' %}
+            <label class="field">
+              <span>Куда метишь пока?</span>
+              <select name="track_goal">
+                {% for opt in track_options %}
+                  <option value="{{ opt }}" {% if user.track_goal == opt %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          {% endif %}
+
+          <label class="checkbox-field">
+            <input type="checkbox" name="notify_updates" {% if user.notify_updates %}checked{% endif %} />
+            <span>Показывать подсказки по новым направлениям и обновлениям разбора</span>
+          </label>
+
+          <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+        </form>
+      </section>
+    {% endif %}
+
+    {% if active_tab == 'guest_test' or (user and user.role == 'student') %}
+      <section class="card" id="test-form">
+        <div class="section-head">
+          <div>
+            <h2>15 вопросов о тебе</h2>
+            <p class="muted">
+              {% if user and user.role == 'student' %}
+                Результат сохранится в твой личный кабинет{% if user.classroom_code %} и станет виден классному руководителю ({{ user.classroom_code }}){% endif %}.
+              {% else %}
+                Гостевой режим: отвечай как есть — 1 вообще не про меня, 5 прям в точку.
+              {% endif %}
+            </p>
+          </div>
         </div>
 
-        <label class="field">
-          <span>Пару слов от себя: что тебя бесит, что зажигает и чего хочется от жизни/учёбы?</span>
-          <textarea
-            name="open_answer"
-            rows="3"
-            placeholder="Например: бесит пустая болтовня без дела, нравится придумывать визуал и разбираться в сложных штуках..."
-          >{{ form_data.open_answer or '' }}</textarea>
-        </label>
+        <form action="{{ url_for('analyze') }}" method="POST" class="form-stack">
+          {% if not user or active_tab == 'guest_test' %}
+            <input type="hidden" name="is_guest" value="{{ '1' if not user else '0' }}" />
+          {% endif %}
 
-        <button type="submit" class="btn btn-primary">Собрать разбор и подобрать вузы СПб</button>
-      </form>
-    </section>
+          <div class="row-3">
+            <label class="field">
+              <span>Как тебя зовут / ник</span>
+              <input
+                type="text"
+                name="student_name"
+                placeholder="Например, Эва"
+                value="{{ form_data.student_name or (user.full_name if user else '') }}"
+              />
+            </label>
+
+            <label class="field">
+              <span>Сейчас ты в...</span>
+              <select name="grade">
+                {% set selected_grade = form_data.grade or (user.grade if user else '9 класс') %}
+                {% for g in grade_options %}
+                  <option value="{{ g }}" {% if selected_grade == g %}selected{% endif %}>{{ g }}</option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Куда метишь пока?</span>
+              <select name="track_goal">
+                {% set selected_track = form_data.track_goal or (user.track_goal if user else 'пока изучаю варианты') %}
+                {% for opt in track_options %}
+                  <option value="{{ opt }}" {% if selected_track == opt %}selected{% endif %}>{{ opt }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+
+          <div class="questions-list">
+            {% for q_id, _, question in questions %}
+              {% set current_val = (form_data.answers[q_id] if form_data.answers else 3) %}
+              <div class="question-item">
+                <p class="question-text"><span class="q-num">{{ loop.index }}.</span> {{ question }}</p>
+                <div class="scale-group">
+                  {% for num in range(1, 6) %}
+                    <label class="scale-pill">
+                      <input
+                        type="radio"
+                        name="{{ q_id }}"
+                        value="{{ num }}"
+                        {% if current_val == num %}checked{% endif %}
+                      />
+                      <span>{{ num }}</span>
+                    </label>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <label class="field">
+            <span>Пару слов от себя: что тебя бесит, что зажигает и чего хочется от жизни/учёбы?</span>
+            <textarea
+              name="open_answer"
+              rows="3"
+              placeholder="Например: бесит пустая болтовня без дела, нравится придумывать визуал и разбираться в сложных штуках..."
+            >{{ form_data.open_answer or '' }}</textarea>
+          </label>
+
+          <button type="submit" class="btn btn-primary">Собрать разбор и подобрать вузы СПб</button>
+        </form>
+      </section>
+    {% endif %}
 
     <section class="card history-card">
       <div class="history-top">
-        <h2>Кто уже проходил</h2>
+        <h2>Последние прохождения на платформе</h2>
         {% if recent %}
           <form action="{{ url_for('clear_history') }}" method="POST">
             <button type="submit" class="btn btn-danger-soft">Очистить список</button>
@@ -316,7 +632,7 @@
           {% endfor %}
         </ul>
       {% else %}
-        <p class="muted">Тут пока пусто — будешь первой.</p>
+        <p class="muted">Тут пока пусто.</p>
       {% endif %}
     </section>
   </main>
