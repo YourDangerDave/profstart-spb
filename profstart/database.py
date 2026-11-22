@@ -23,7 +23,6 @@ def get_connection() -> sqlite3.Connection:
 
 
 def init_db() -> None:
-    """Создаёт таблицы пользователей, комнат классов, рекомендаций и результатов."""
     with get_connection() as conn:
         conn.execute(
             """
@@ -111,7 +110,7 @@ def register_or_login_user(phone: str, role: str, full_name: str) -> Dict[str, A
         existing = conn.execute("SELECT * FROM users WHERE phone = ?", (clean_phone,)).fetchone()
         if existing:
             conn.execute(
-                "UPDATE users SET role = ?, full_name = COALESCE(NULLIF(?, ''), full_name) WHERE id = ?",
+                "UPDATE users SET role = ?, full_name = ? WHERE id = ?",
                 (clean_role, clean_name, existing["id"]),
             )
             conn.commit()
@@ -206,7 +205,7 @@ def get_teacher_classroom(teacher_id: int) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
-def get_classroom_by_code(code: str) -> Optional[Dict[str, Any]]:
+def get_classroom_by_code(code: Optional[str]) -> Optional[Dict[str, Any]]:
     clean_code = (code or "").strip().upper()
     if not clean_code:
         return None
