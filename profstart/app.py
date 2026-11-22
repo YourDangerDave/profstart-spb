@@ -91,7 +91,6 @@ def index():
             elif not candidate.get("user_id"):
                 expanded_assessment = candidate
 
-    # Если пользователь залогинен и явно не запросил гостевой тест — показываем его кабинет
     if user and view_mode not in ("guest_test", "entry"):
         active_tab = "cabinet"
     elif view_mode == "guest_test":
@@ -141,7 +140,7 @@ def auth_request_code():
         "code": code,
     }
     session["pending_code"] = code
-    session["notice"] = f"Код подтверждения для {phone}: {code} (учебный режим верификации)."
+    session["notice"] = f"Код подтверждения для {phone}: {code} (учебный режим)."
     return redirect(url_for("index"))
 
 
@@ -159,13 +158,13 @@ def auth_verify():
         return redirect(url_for("index"))
 
     if not entered_code or entered_code != expected_code:
-        session["auth_error"] = f"Неверный код подтверждения. Текущий код для теста: {expected_code}"
+        session["auth_error"] = f"Неверный код. Действующий код: {expected_code}"
         return redirect(url_for("index"))
 
     user = register_or_login_user(phone=phone, role=role, full_name=full_name)
     session["user_id"] = user["id"]
     session.pop("pending_auth", None)
-    session["notice"] = f"Добро пожаловать, {user['full_name']}!"
+    session["notice"] = f"Вход выполнен: {user['full_name']}."
     return redirect(url_for("index"))
 
 
@@ -203,7 +202,7 @@ def classroom_create():
 
     title = request.form.get("classroom_title", "")
     room = create_classroom(teacher_id=user["id"], title=title)
-    session["notice"] = f"Комната «{room['title']}» готова. Код для учеников: {room['code']}"
+    session["notice"] = f"Комната «{room['title']}» активна. Код для учеников: {room['code']}"
     return redirect(url_for("index"))
 
 
@@ -218,9 +217,9 @@ def classroom_join():
     if not ok:
         session["auth_error"] = f"Комната с кодом «{code.upper()}» не найдена."
     elif code:
-        session["notice"] = f"Ты присоединился к комнате класса {code.upper()}."
+        session["notice"] = f"Ты подключён к комнате {code.upper()}."
     else:
-        session["notice"] = "Ты перешёл на независимое прохождение (вне комнаты класса)."
+        session["notice"] = "Включён независимый режим (без комнаты класса)."
     return redirect(url_for("index"))
 
 
@@ -243,7 +242,7 @@ def classroom_guidance():
             teacher_id=user["id"],
             requirement_text=requirement_text,
         )
-        session["notice"] = "Индивидуальные рекомендации/требования для ученика обновлены."
+        session["notice"] = "Индивидуальные требования/рекомендации для ученика сохранены."
     return redirect(url_for("index"))
 
 
