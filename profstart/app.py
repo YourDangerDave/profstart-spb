@@ -5,8 +5,11 @@ from ai_analyzer import analyze_student_profile
 from database import (
     AVATAR_ANIMALS,
     init_db,
+    normalize_phone,
     get_user_by_id,
-    register_or_login_user,
+    get_user_by_phone,
+    register_user,
+    authenticate_user,
     update_user_settings,
     create_classroom,
     get_teacher_classroom,
@@ -71,8 +74,8 @@ def index():
     view_mode = request.args.get("view", "entry")
     expanded_id = request.args.get("open_result", type=int)
 
-    if "pending_code" not in session:
-        session["pending_code"] = str(random.randint(1000, 9999))
+    if "sms_code" not in session:
+        session["sms_code"] = str(random.randint(1000, 9999))
 
     recent = get_recent_assessments(limit=10)
     user_assessments = get_user_assessments(user["id"], limit=20) if user else []
@@ -91,7 +94,7 @@ def index():
             elif not candidate.get("user_id"):
                 expanded_assessment = candidate
 
-    if user and view_mode not in ("guest_test", "entry"):
+    if user and view_mode != "guest_test":
         active_tab = "cabinet"
     elif view_mode == "guest_test":
         active_tab = "guest_test"
@@ -107,7 +110,7 @@ def index():
         questions=QUESTIONS,
         track_options=TRACK_OPTIONS,
         grade_options=GRADE_OPTIONS,
-        demo_code=session.get("pending_code"),
+        sms_code=session.get("sms_code"),
         auth_error=session.pop("auth_error", None),
         notice=session.pop("notice", None),
         result=None,
@@ -122,56 +125,60 @@ def index():
     )
 
 
-@app.route("/auth/request-code", methods=["POST"])
-def auth_request_code():
-    phone = request.form.get("phone", "").strip()
-    role = request.form.get("role", "student")
+@app.route("/register", methods=["POST"])
+def register():
     full_name = request.form.get("full_name", "").strip()
+    phone = request.form.get("phone", "").strip()
+    password = request.form.get("password", "").strip()
+    role = request.form.get("role", "student").strip()
+    code = request.form.get("code", "").strip()
+    expected_code = session.get("sms_code", "")
 
-    if not phone:
-        session["auth_error"] = "Укажи номер телефона, чтобы получить код подтверждения."
+    clean_phone = normalize_phone(phone)
+    if len(clean_phone) < 8:
+        session["auth_error"] = "Введи корректный номер телефона."
         return redirect(url_for("index"))
 
-    code = str(random.randint(1000, 9999))
-    session["pending_auth"] = {
-        "phone": phone,
-        "role": role if role in ("student", "teacher") else "student",
-        "full_name": full_name,
-        "code": code,
-    }
-    session["pending_code"] = code
-    session["notice"] = f"Код подтверждения для {phone}: {code} (учебный режим)."
+    if len(password) < 4:
+        session["auth_error"] = "Пароль должен быть не короче 4 символов."
+        return redirect(url_for("index"))
+
+    if code and expected_code and code != expected_code:
+        session["auth_error"] = f"Неверный код подтверждения. Актуальный код: {expected_code}"
+        return redirect(url_for("index"))
+
+    if get_user_by_phone(clean_phone):
+        session["auth_error"] = f"Аккаунт с номером {clean_phone} уже существует. Используй форму входа."
+        return redirect(url_for("index"))
+
+    user = register_user(phone=clean_phone, password=password, role=role, full_name=full_name)
+    session["user_id"] = user["id"]
+    session["sms_code"] = str(random.randint(1000, 9999))
+    role_label = "учителя" if user["role"] == "teacher" else "ученика"
+    session["notice"] = f"Создан аккаунт {role_label}: {user['full_name']} ({user['phone']})."
     return redirect(url_for("index"))
 
 
-@app.route("/auth/verify", methods=["POST"])
-def auth_verify():
-    entered_code = request.form.get("code", "").strip()
-    pending = session.get("pending_auth") or {}
-    phone = request.form.get("phone", "").strip() or pending.get("phone", "")
-    role = request.form.get("role", pending.get("role", "student"))
-    full_name = request.form.get("full_name", "").strip() or pending.get("full_name", "")
-    expected_code = pending.get("code") or session.get("pending_code")
+@app.route("/login", methods=["POST"])
+def login():
+    phone = request.form.get("phone", "").strip()
+    password = request.form.get("password", "").strip()
 
-    if not phone:
-        session["auth_error"] = "Сначала введи номер телефона."
+    user = authenticate_user(phone=phone, password=password)
+    if not user:
+        session["auth_error"] = "Неверный телефон или пароль. Если аккаунта ещё нет — пройди регистрацию."
         return redirect(url_for("index"))
 
-    if not entered_code or entered_code != expected_code:
-        session["auth_error"] = f"Неверный код. Действующий код: {expected_code}"
-        return redirect(url_for("index"))
-
-    user = register_or_login_user(phone=phone, role=role, full_name=full_name)
     session["user_id"] = user["id"]
-    session.pop("pending_auth", None)
-    session["notice"] = f"Вход выполнен: {user['full_name']}."
+    role_label = "учителя" if user["role"] == "teacher" else "ученика"
+    session["notice"] = f"Вход выполнен в кабинет {role_label}: {user['full_name']}."
     return redirect(url_for("index"))
 
 
 @app.route("/logout", methods=["POST"])
 def logout():
     session.pop("user_id", None)
-    session["notice"] = "Ты вышел из личного кабинета."
+    session["notice"] = "Ты вышел из аккаунта."
     return redirect(url_for("index"))
 
 
@@ -202,7 +209,7 @@ def classroom_create():
 
     title = request.form.get("classroom_title", "")
     room = create_classroom(teacher_id=user["id"], title=title)
-    session["notice"] = f"Комната «{room['title']}» активна. Код для учеников: {room['code']}"
+    session["notice"] = f"Комната «{room['title']}» создана. Код класса: {room['code']}"
     return redirect(url_for("index"))
 
 
@@ -217,7 +224,7 @@ def classroom_join():
     if not ok:
         session["auth_error"] = f"Комната с кодом «{code.upper()}» не найдена."
     elif code:
-        session["notice"] = f"Ты подключён к комнате {code.upper()}."
+        session["notice"] = f"Ты вступил в комнату класса {code.upper()}."
     else:
         session["notice"] = "Включён независимый режим (без комнаты класса)."
     return redirect(url_for("index"))
@@ -242,7 +249,7 @@ def classroom_guidance():
             teacher_id=user["id"],
             requirement_text=requirement_text,
         )
-        session["notice"] = "Индивидуальные требования/рекомендации для ученика сохранены."
+        session["notice"] = "Индивидуальные требования/рекомендации для ученика обновлены."
     return redirect(url_for("index"))
 
 
@@ -307,7 +314,7 @@ def analyze():
         questions=QUESTIONS,
         track_options=TRACK_OPTIONS,
         grade_options=GRADE_OPTIONS,
-        demo_code=session.get("pending_code", "2026"),
+        sms_code=session.get("sms_code", "2026"),
         auth_error=None,
         notice="Тест пройден — разбор сформирован и сохранён.",
         result=analysis,
