@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Профстарт — Навигатор по характерам, профессиям и вузам СПб{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <div class="cosmos-layer" aria-hidden="true">
+    <svg class="cosmos-svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="nebulaViolet" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#a855f7" stop-opacity="0.34" />
+          <stop offset="60%" stop-color="#6d28d9" stop-opacity="0.14" />
+          <stop offset="100%" stop-color="#6d28d9" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="nebulaCyan" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.28" />
+          <stop offset="65%" stop-color="#0891b2" stop-opacity="0.1" />
+          <stop offset="100%" stop-color="#0891b2" stop-opacity="0" />
+        </radialGradient>
+        <radialGradient id="planetIce" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#a5f3fc" />
+          <stop offset="55%" stop-color="#22d3ee" />
+          <stop offset="100%" stop-color="#1e1b4b" />
+        </radialGradient>
+        <radialGradient id="planetAmethyst" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#e9d5ff" />
+          <stop offset="55%" stop-color="#9333ea" />
+          <stop offset="100%" stop-color="#1e1035" />
+        </radialGradient>
+        <linearGradient id="galaxyArm" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#c084fc" stop-opacity="0.55" />
+          <stop offset="50%" stop-color="#67e8f9" stop-opacity="0.45" />
+          <stop offset="100%" stop-color="#a855f7" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+
+      <ellipse cx="230" cy="210" rx="340" ry="220" fill="url(#nebulaViolet)" />
+      <ellipse cx="1180" cy="190" rx="320" ry="200" fill="url(#nebulaCyan)" />
+      <ellipse cx="960" cy="690" rx="360" ry="230" fill="url(#nebulaViolet)" />
+
+      <g transform="translate(1160, 150) rotate(-24)" opacity="0.72">
+        <ellipse cx="0" cy="0" rx="92" ry="24" fill="url(#galaxyArm)" />
+        <ellipse cx="0" cy="0" rx="54" ry="12" stroke="#e0f2fe" stroke-opacity="0.35" stroke-width="1.2" fill="none" />
+        <circle cx="0" cy="0" r="8" fill="#fef9c3" fill-opacity="0.85" />
+      </g>
+
+      <g transform="translate(190, 720) rotate(18)" opacity="0.6">
+        <ellipse cx="0" cy="0" rx="74" ry="19" fill="url(#galaxyArm)" />
+        <circle cx="0" cy="0" r="6" fill="#f3e8ff" fill-opacity="0.8" />
+      </g>
+
+      <g transform="translate(1250, 440)">
+        <circle cx="0" cy="0" r="28" fill="url(#planetIce)" />
+        <path d="M-24 -8 A28 28 0 0 1 14 -24" stroke="#cffafe" stroke-opacity="0.45" stroke-width="2" fill="none" />
+      </g>
+
+      <g transform="translate(145, 430) rotate(-16)">
+        <ellipse cx="0" cy="2" rx="44" ry="10" stroke="#c4b5fd" stroke-opacity="0.45" stroke-width="2.2" fill="none" />
+        <circle cx="0" cy="0" r="21" fill="url(#planetAmethyst)" />
+        <path d="M-38 1 A44 10 0 0 0 38 3" stroke="#67e8f9" stroke-opacity="0.4" stroke-width="1.8" fill="none" />
+      </g>
+
+      <circle cx="760" cy="110" r="11" fill="url(#planetIce)" opacity="0.75" />
+
+      <g fill="#ffffff">
+        <circle cx="95" cy="95" r="1.4" opacity="0.85" />
+        <circle cx="340" cy="72" r="1.1" opacity="0.65" />
+        <circle cx="510" cy="155" r="1.8" opacity="0.9" />
+        <circle cx="635" cy="64" r="1.2" opacity="0.7" />
+        <circle cx="890" cy="180" r="1.5" opacity="0.8" />
+        <circle cx="1360" cy="95" r="1.7" opacity="0.85" />
+        <circle cx="82" cy="590" r="1.3" opacity="0.75" />
+        <circle cx="420" cy="520" r="1.1" opacity="0.6" />
+        <circle cx="690" cy="480" r="1.6" opacity="0.85" />
+        <circle cx="1040" cy="540" r="1.2" opacity="0.7" />
+        <circle cx="1320" cy="760" r="1.8" opacity="0.9" />
+        <circle cx="560" cy="810" r="1.3" opacity="0.75" />
+        <circle cx="840" cy="840" r="1.1" opacity="0.65" />
+        <circle cx="1120" cy="310" r="1.2" opacity="0.7" />
+        <circle cx="290" cy="315" r="1.5" opacity="0.8" />
+      </g>
+    </svg>
+  </div>
+
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a href="{{ url_for('index') }}" class="brand">
+        <span class="logo-mark" aria-hidden="true">
+          <svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="11" fill="url(#logoGrad)" />
+            <ellipse cx="18" cy="18" rx="12" ry="5.5" transform="rotate(-28 18 18)" stroke="rgba(255,255,255,0.45)" stroke-width="1.4" />
+            <path d="M23.5 10.5C23.5 10.5 24.8 15.2 21.4 18.6C18 22 13.3 20.7 13.3 20.7C13.3 20.7 14.6 16 18 12.6C21.4 9.2 23.5 10.5 23.5 10.5Z" fill="#FFFFFF" />
+            <circle cx="20.6" cy="13.4" r="1.5" fill="#4F46E5" />
+            <circle cx="11.5" cy="11" r="1.2" fill="#A5F3FC" />
+            <circle cx="26.5" cy="24.5" r="1.3" fill="#FDE68A" />
+            <defs>
+              <linearGradient id="logoGrad" x1="2" y1="2" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+                <stop stop-color="#7c3aed" />
+                <stop offset="1" stop-color="#06b6d4" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+        <div>
+          <div class="brand-title-row">
+            <strong>ПРОФСТАРТ</strong>
+            <span class="spb-pill">СПб</span>
+          </div>
+          <p class="subtitle">Характер, склонности, классы и вузы Петербурга</p>
+        </div>
+      </a>
+
+      <div class="topbar-actions">
+        {% if user %}
+          <span class="user-chip">
+            {{ avatar_map.get(user.avatar_id, {}).get('emoji', '🦉') }}
+            {{ user.full_name }} · {{ 'Учитель' if user.role == 'teacher' else 'Ученик' }}
+          </span>
+          <form action="{{ url_for('logout') }}" method="POST" class="inline-form">
+            <button type="submit" class="btn btn-small">Выйти</button>
+          </form>
+        {% else %}
+          <a href="{{ url_for('index') }}" class="btn btn-small">Вход / Регистрация</a>
+        {% endif %}
+      </div>
+    </div>
+
+    <nav class="container nav-tabs" aria-label="Навигация по разделам">
+      <a href="{{ url_for('index') }}" class="nav-tab {% if active_page == 'entry' %}active{% endif %}">Главная</a>
+      {% if user %}
+        <a href="{{ url_for('cabinet') }}" class="nav-tab {% if active_page == 'cabinet' %}active{% endif %}">Личный кабинет</a>
+        <a href="{{ url_for('settings_page') }}" class="nav-tab {% if active_page == 'settings' %}active{% endif %}">Настройки</a>
+      {% endif %}
+      <a href="{{ url_for('test_page') }}" class="nav-tab {% if active_page == 'test' %}active{% endif %}">Тестирование</a>
+      {% if session.get('last_result') %}
+        <a href="{{ url_for('result_page') }}" class="nav-tab {% if active_page == 'result' %}active{% endif %}">Результат</a>
+      {% endif %}
+      <a href="{{ url_for('history_page') }}" class="nav-tab {% if active_page == 'history' %}active{% endif %}">Журнал</a>
+    </nav>
+  </header>
+
+  <main class="container main-grid">
+    {% if notice %}
+      <div class="alert alert-info">{{ notice }}</div>
+    {% endif %}
+    {% if auth_error %}
+      <div class="alert alert-error">{{ auth_error }}</div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
