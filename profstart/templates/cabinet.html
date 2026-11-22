@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Личный кабинет — Профстарт СПб{% endblock %}
+
+{% block content %}
+<section class="card cabinet-header">
+  <div class="cabinet-profile-top">
+    <div class="big-avatar">{{ avatar_map.get(user.avatar_id, {}).get('emoji', '🦉') }}</div>
+    <div>
+      <span class="eyebrow">Личный кабинет · {{ 'Учитель' if user.role == 'teacher' else 'Ученик' }}</span>
+      <h1>{{ user.full_name }}</h1>
+      <p class="muted">
+        Тел.: {{ user.phone }}
+        {% if user.email %} · Почта: {{ user.email }}{% endif %}
+        {% if user.role == 'student' %} · {{ user.grade }} · {{ user.track_goal }}{% endif %}
+      </p>
+    </div>
+  </div>
+</section>
+
+{% if user.role == 'student' %}
+  <section class="card">
+    <h2>Комната класса или независимый режим</h2>
+    {% if joined_room %}
+      <p class="muted">
+        Ты подключён к комнате <strong>«{{ joined_room.title }}»</strong> (код: <strong>{{ joined_room.code }}</strong>).
+        Классный руководитель видит твои результаты и может оставлять для тебя индивидуальные рекомендации.
+      </p>
+    {% else %}
+      <p class="muted">
+        Сейчас ты проходишь тесты <strong>независимо</strong>. Если у классного руководителя есть код комнаты — введи его ниже, либо оставь поле пустым.
+      </p>
+    {% endif %}
+
+    <form action="{{ url_for('classroom_join') }}" method="POST" class="inline-row">
+      <input
+        type="text"
+        name="classroom_code"
+        value="{{ user.classroom_code or '' }}"
+        placeholder="Код комнаты, например SPB-412-B"
+      />
+      <button type="submit" class="btn btn-primary">Сохранить режим</button>
+    </form>
+
+    {% if guidance %}
+      <div class="guidance-banner">
+        <h3>Требования и советы от классного руководителя ({{ guidance.teacher_name or 'Учитель' }})</h3>
+        <p>{{ guidance.requirement_text }}</p>
+      </div>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>Мои результаты тестирования</h2>
+    {% if user_assessments %}
+      <div class="results-accordion">
+        {% for item in user_assessments %}
+          {% set is_open = (expanded_assessment and expanded_assessment.id == item.id) %}
+          <div class="result-item-card">
+            <div class="result-item-head">
+              <div>
+                <strong>{{ item.top_profile_title }} — {{ item.top_percent }}%</strong>
+                <div class="muted small-meta">Дата: {{ item.created_at }} · {{ item.grade }}</div>
+              </div>
+              <a
+                href="{{ url_for('cabinet', open_result=(None if is_open else item.id)) }}"
+                class="btn btn-small"
+              >
+                {{ 'Скрыть' if is_open else 'Раскрыть' }}
+              </a>
+            </div>
+
+            {% if is_open %}
+              <div class="expanded-body">
+                <p>{{ item.summary }}</p>
+                {% if item.report.personality_portrait %}
+                  <div class="portrait-box">
+                    <h3>Характер и стиль мышления</h3>
+                    <p>{{ item.report.personality_portrait }}</p>
+                  </div>
+                {% endif %}
+                {% if item.report.full_advice %}
+                  <div class="advice-box">
+                    <h3>Советы по развитию</h3>
+                    <ul class="advice-list">
+                      {% for tip in item.report.full_advice %}
+                        <li>{{ tip }}</li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endif %}
+                {% if item.report.top_profile and item.report.top_profile.universities %}
+                  <div class="uni-section">
+                    <h3>ВУЗы СПб и примерные направления</h3>
+                    <div class="uni-grid">
+                      {% for uni in item.report.top_profile.universities %}
+                        <div class="uni-card">
+                          <strong>{{ uni.name }}</strong>
+                          <p>{{ uni.programs }}</p>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="muted">Ты ещё не проходил(а) тест в кабинете — перейди на вкладку «Тестирование», чтобы сохранить первый разбор.</p>
+    {% endif %}
+  </section>
+{% endif %}
+
+{% if user.role == 'teacher' %}
+  <section class="card">
+    <h2>Комната класса</h2>
+    {% if teacher_room %}
+      <div class="room-badge-box">
+        <div>
+          <strong>{{ teacher_room.title }}</strong>
+          <p class="muted">Код для подключения учеников: <span class="room-code">{{ teacher_room.code }}</span></p>
+        </div>
+      </div>
+    {% else %}
+      <p class="muted">Создай комнату класса, чтобы получить индивидуальный код и смотреть результаты учеников.</p>
+    {% endif %}
+
+    <form action="{{ url_for('classroom_create') }}" method="POST" class="inline-row">
+      <input
+        type="text"
+        name="classroom_title"
+        value="{{ teacher_room.title if teacher_room else '' }}"
+        placeholder="Название класса, например: 9 «А» класс, СПб"
+        required
+      />
+      <button type="submit" class="btn btn-primary">
+        {{ 'Обновить комнату' if teacher_room else 'Создать комнату класса' }}
+      </button>
+    </form>
+  </section>
+
+  {% if teacher_room %}
+    <section class="card">
+      <h2>Ученики в комнате ({{ classroom_students|length }}) и корректировка требований</h2>
+      {% if classroom_students %}
+        <div class="students-stack">
+          {% for st in classroom_students %}
+            <div class="student-row-card">
+              <div class="student-top">
+                <div>
+                  <strong>{{ avatar_map.get(st.avatar_id, {}).get('emoji', '🦊') }} {{ st.full_name }}</strong>
+                  <span class="muted">({{ st.grade }} · {{ st.track_goal }})</span>
+                </div>
+                {% if st.latest_assessment %}
+                  <span class="badge-percent">
+                    {{ st.latest_assessment.top_profile_title }} · {{ st.latest_assessment.top_percent }}%
+                  </span>
+                {% else %}
+                  <span class="muted">Тест ещё не пройден</span>
+                {% endif %}
+              </div>
+
+              {% if st.latest_assessment %}
+                <p class="small-meta muted">
+                  Последнее прохождение: {{ st.latest_assessment.created_at }}. {{ st.latest_assessment.summary }}
+                </p>
+              {% endif %}
+
+              <form action="{{ url_for('classroom_guidance') }}" method="POST" class="form-stack compact-form">
+                <input type="hidden" name="student_id" value="{{ st.id }}" />
+                <label class="field">
+                  <span>Индивидуальные требования / ориентиры для ученика с учётом профиля</span>
+                  <textarea
+                    name="requirement_text"
+                    rows="2"
+                    placeholder="Например: подготовить мини-проект по выбранному профилю к пятнице и изучить проходные/профили в вузах СПб..."
+                  >{{ st.requirement_text or '' }}</textarea>
+                </label>
+                <button type="submit" class="btn btn-small">Сохранить требования для ученика</button>
+              </form>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">Пока никто не вошёл по коду <strong>{{ teacher_room.code }}</strong>.</p>
+      {% endif %}
+    </section>
+  {% endif %}
+{% endif %}
+{% endblock %}
