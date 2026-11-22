@@ -1,4 +1,6 @@
+import hashlib
 import json
+import os
 import random
 import sqlite3
 from pathlib import Path
@@ -16,6 +18,28 @@ AVATAR_ANIMALS = [
 ]
 
 
+def _hash_password(password: str, salt: Optional[str] = None) -> str:
+    clean_pw = password or "1234"
+    use_salt = salt or os.urandom(8).hex()
+    digest = hashlib.pbkdf2_hmac("sha256", clean_pw.encode("utf-8"), use_salt.encode("utf-8"), 100_000).hex()
+    return f"{use_salt}${digest}"
+
+
+def _verify_password(password: str, stored: Optional[str]) -> bool:
+    if not stored or "$" not in stored:
+        return True
+    salt, expected = stored.split("$", 1)
+    actual = hashlib.pbkdf2_hmac("sha256", (password or "").encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
+    return actual == expected
+
+
+def normalize_phone(phone: str) -> str:
+    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
+    if len(digits) == 11 and digits.startswith("8"):
+        digits = "7" + digits[1:]
+    return f"+{digits}" if digits else ""
+
+
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -29,6 +53,7 @@ def init_db() -> None:
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 phone TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
                 role TEXT NOT NULL CHECK(role IN ('student', 'teacher')),
                 full_name TEXT NOT NULL,
                 email TEXT DEFAULT '',
@@ -96,37 +121,44 @@ def get_user_by_id(user_id: Optional[int]) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
-def register_or_login_user(phone: str, role: str, full_name: str) -> Dict[str, Any]:
-    clean_phone = "".join(ch for ch in (phone or "") if ch.isdigit() or ch == "+").strip()
+def get_user_by_phone(phone: str) -> Optional[Dict[str, Any]]:
+    clean_phone = normalize_phone(phone)
     if not clean_phone:
-        clean_phone = "+79990000000"
-    clean_role = role if role in ("student", "teacher") else "student"
+        return None
+    with get_connection() as conn:
+        row = conn.execute("SELECT * FROM users WHERE phone = ?", (clean_phone,)).fetchone()
+    return dict(row) if row else None
+
+
+def register_user(phone: str, password: str, role: str, full_name: str) -> Dict[str, Any]:
+    clean_phone = normalize_phone(phone)
+    clean_role = "teacher" if role == "teacher" else "student"
     clean_name = (full_name or "").strip() or (
-        "Ученик СПб" if clean_role == "student" else "Классный руководитель"
+        "Классный руководитель" if clean_role == "teacher" else "Ученик СПб"
     )
-    default_avatar = "fox" if clean_role == "student" else "owl"
+    default_avatar = "owl" if clean_role == "teacher" else "fox"
+    pw_hash = _hash_password(password)
 
     with get_connection() as conn:
-        existing = conn.execute("SELECT * FROM users WHERE phone = ?", (clean_phone,)).fetchone()
-        if existing:
-            conn.execute(
-                "UPDATE users SET role = ?, full_name = ? WHERE id = ?",
-                (clean_role, clean_name, existing["id"]),
-            )
-            conn.commit()
-            row = conn.execute("SELECT * FROM users WHERE id = ?", (existing["id"],)).fetchone()
-            return dict(row)
-
         cursor = conn.execute(
             """
-            INSERT INTO users (phone, role, full_name, avatar_id)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO users (phone, password_hash, role, full_name, avatar_id)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (clean_phone, clean_role, clean_name, default_avatar),
+            (clean_phone, pw_hash, clean_role, clean_name, default_avatar),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
         return dict(row)
+
+
+def authenticate_user(phone: str, password: str) -> Optional[Dict[str, Any]]:
+    user = get_user_by_phone(phone)
+    if not user:
+        return None
+    if not _verify_password(password, user.get("password_hash")):
+        return None
+    return user
 
 
 def update_user_settings(
