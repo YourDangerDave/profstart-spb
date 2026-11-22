@@ -72,6 +72,34 @@ body {
   gap: 12px;
   flex-wrap: wrap;
 }
+.nav-tabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 10px;
+  overflow-x: auto;
+}
+
+.nav-tab {
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.nav-tab:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-tab.active {
+  color: #fff;
+  background: rgba(124, 58, 237, 0.32);
+  border-color: rgba(165, 243, 252, 0.35);
+}
 
 .topbar-actions {
   display: flex;
