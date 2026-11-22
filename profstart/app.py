@@ -68,61 +68,105 @@ def _avatar_map():
     return {item["id"]: item for item in AVATAR_ANIMALS}
 
 
-@app.route("/", methods=["GET"])
-def index():
+def _common_context(active_page: str):
     user = _current_user()
-    view_mode = request.args.get("view", "entry")
-    expanded_id = request.args.get("open_result", type=int)
-
     if "sms_code" not in session:
         session["sms_code"] = str(random.randint(1000, 9999))
+    return {
+        "active_page": active_page,
+        "user": user,
+        "avatars": AVATAR_ANIMALS,
+        "avatar_map": _avatar_map(),
+        "track_options": TRACK_OPTIONS,
+        "grade_options": GRADE_OPTIONS,
+        "sms_code": session.get("sms_code"),
+        "auth_error": session.pop("auth_error", None),
+        "notice": session.pop("notice", None),
+    }
 
-    recent = get_recent_assessments(limit=10)
-    user_assessments = get_user_assessments(user["id"], limit=20) if user else []
-    guidance = get_guidance_for_student(user["id"], user.get("classroom_code")) if (user and user["role"] == "student") else None
-    joined_room = get_classroom_by_code(user.get("classroom_code")) if (user and user["role"] == "student") else None
 
-    teacher_room = get_teacher_classroom(user["id"]) if (user and user["role"] == "teacher") else None
+@app.route("/", methods=["GET"])
+def index():
+    ctx = _common_context("entry")
+    return render_template("entry.html", **ctx)
+
+
+@app.route("/cabinet", methods=["GET"])
+def cabinet():
+    user = _current_user()
+    if not user:
+        session["auth_error"] = "Сначала войди в аккаунт или пройди тест в гостевом режиме."
+        return redirect(url_for("index"))
+
+    expanded_id = request.args.get("open_result", type=int)
+    user_assessments = get_user_assessments(user["id"], limit=20) if user["role"] == "student" else []
+    guidance = get_guidance_for_student(user["id"], user.get("classroom_code")) if user["role"] == "student" else None
+    joined_room = get_classroom_by_code(user.get("classroom_code")) if user["role"] == "student" else None
+
+    teacher_room = get_teacher_classroom(user["id"]) if user["role"] == "teacher" else None
     classroom_students = get_classroom_students_overview(teacher_room["code"]) if teacher_room else []
 
     expanded_assessment = None
     if expanded_id:
         candidate = get_assessment_by_id(expanded_id)
-        if candidate:
-            if user and (candidate.get("user_id") == user["id"] or (teacher_room and candidate.get("classroom_code") == teacher_room["code"])):
-                expanded_assessment = candidate
-            elif not candidate.get("user_id"):
-                expanded_assessment = candidate
+        if candidate and (
+            candidate.get("user_id") == user["id"]
+            or (teacher_room and candidate.get("classroom_code") == teacher_room["code"])
+        ):
+            expanded_assessment = candidate
 
-    if user and view_mode != "guest_test":
-        active_tab = "cabinet"
-    elif view_mode == "guest_test":
-        active_tab = "guest_test"
-    else:
-        active_tab = "entry"
-
-    return render_template(
-        "index.html",
-        active_tab=active_tab,
-        user=user,
-        avatars=AVATAR_ANIMALS,
-        avatar_map=_avatar_map(),
-        questions=QUESTIONS,
-        track_options=TRACK_OPTIONS,
-        grade_options=GRADE_OPTIONS,
-        sms_code=session.get("sms_code"),
-        auth_error=session.pop("auth_error", None),
-        notice=session.pop("notice", None),
-        result=None,
-        recent=recent,
-        user_assessments=user_assessments,
-        expanded_assessment=expanded_assessment,
-        guidance=guidance,
-        joined_room=joined_room,
-        teacher_room=teacher_room,
-        classroom_students=classroom_students,
-        form_data={},
+    ctx = _common_context("cabinet")
+    ctx.update(
+        {
+            "user_assessments": user_assessments,
+            "expanded_assessment": expanded_assessment,
+            "guidance": guidance,
+            "joined_room": joined_room,
+            "teacher_room": teacher_room,
+            "classroom_students": classroom_students,
+        }
     )
+    return render_template("cabinet.html", **ctx)
+
+
+@app.route("/test", methods=["GET"])
+def test_page():
+    ctx = _common_context("test")
+    ctx.update(
+        {
+            "questions": QUESTIONS,
+            "form_data": {},
+        }
+    )
+    return render_template("test.html", **ctx)
+
+
+@app.route("/result", methods=["GET"])
+def result_page():
+    report_data = session.get("last_result")
+    if not report_data:
+        return redirect(url_for("test_page"))
+    ctx = _common_context("result")
+    ctx.update({"result": report_data})
+    return render_template("result.html", **ctx)
+
+
+@app.route("/settings", methods=["GET"])
+def settings_page():
+    user = _current_user()
+    if not user:
+        session["auth_error"] = "Настройки профиля доступны после входа в аккаунт."
+        return redirect(url_for("index"))
+    ctx = _common_context("settings")
+    return render_template("settings.html", **ctx)
+
+
+@app.route("/history", methods=["GET"])
+def history_page():
+    recent = get_recent_assessments(limit=20)
+    ctx = _common_context("history")
+    ctx.update({"recent": recent})
+    return render_template("history.html", **ctx)
 
 
 @app.route("/register", methods=["POST"])
@@ -156,7 +200,7 @@ def register():
     session["sms_code"] = str(random.randint(1000, 9999))
     role_label = "учителя" if user["role"] == "teacher" else "ученика"
     session["notice"] = f"Создан аккаунт {role_label}: {user['full_name']} ({user['phone']})."
-    return redirect(url_for("index"))
+    return redirect(url_for("cabinet"))
 
 
 @app.route("/login", methods=["POST"])
@@ -172,7 +216,7 @@ def login():
     session["user_id"] = user["id"]
     role_label = "учителя" if user["role"] == "teacher" else "ученика"
     session["notice"] = f"Вход выполнен в кабинет {role_label}: {user['full_name']}."
-    return redirect(url_for("index"))
+    return redirect(url_for("cabinet"))
 
 
 @app.route("/logout", methods=["POST"])
@@ -198,7 +242,7 @@ def save_profile_settings():
         notify_updates=bool(request.form.get("notify_updates")),
     )
     session["notice"] = "Настройки профиля и аватарка сохранены."
-    return redirect(url_for("index"))
+    return redirect(url_for("settings_page"))
 
 
 @app.route("/classroom/create", methods=["POST"])
@@ -210,7 +254,7 @@ def classroom_create():
     title = request.form.get("classroom_title", "")
     room = create_classroom(teacher_id=user["id"], title=title)
     session["notice"] = f"Комната «{room['title']}» создана. Код класса: {room['code']}"
-    return redirect(url_for("index"))
+    return redirect(url_for("cabinet"))
 
 
 @app.route("/classroom/join", methods=["POST"])
@@ -227,7 +271,7 @@ def classroom_join():
         session["notice"] = f"Ты вступил в комнату класса {code.upper()}."
     else:
         session["notice"] = "Включён независимый режим (без комнаты класса)."
-    return redirect(url_for("index"))
+    return redirect(url_for("cabinet"))
 
 
 @app.route("/classroom/guidance", methods=["POST"])
@@ -238,7 +282,7 @@ def classroom_guidance():
 
     room = get_teacher_classroom(user["id"])
     if not room:
-        return redirect(url_for("index"))
+        return redirect(url_for("cabinet"))
 
     student_id = request.form.get("student_id", type=int)
     requirement_text = request.form.get("requirement_text", "")
@@ -250,7 +294,7 @@ def classroom_guidance():
             requirement_text=requirement_text,
         )
         session["notice"] = "Индивидуальные требования/рекомендации для ученика обновлены."
-    return redirect(url_for("index"))
+    return redirect(url_for("cabinet"))
 
 
 @app.route("/analyze", methods=["POST"])
@@ -267,15 +311,12 @@ def analyze():
     open_answer = request.form.get("open_answer", "")
 
     scores = {"it_tech": 0, "science_med": 0, "social_hum": 0, "creative_design": 0, "econ_mgmt": 0}
-    answers_map = {}
-
     for q_id, profile_key, _ in QUESTIONS:
         raw_val = request.form.get(q_id, "3")
         try:
             val = max(1, min(5, int(raw_val)))
         except ValueError:
             val = 3
-        answers_map[q_id] = val
         scores[profile_key] += val
 
     analysis = analyze_student_profile(
@@ -296,50 +337,16 @@ def analyze():
         classroom_code=room_code,
     )
 
-    recent = get_recent_assessments(limit=10)
-    user_assessments = get_user_assessments(user["id"], limit=20) if user else []
-    guidance = get_guidance_for_student(user["id"], user.get("classroom_code")) if (user and user["role"] == "student") else None
-    joined_room = get_classroom_by_code(user.get("classroom_code")) if (user and user["role"] == "student") else None
-    teacher_room = get_teacher_classroom(user["id"]) if (user and user["role"] == "teacher") else None
-    classroom_students = get_classroom_students_overview(teacher_room["code"]) if teacher_room else []
-
-    active_tab = "cabinet" if (user and not is_guest) else "guest_test"
-
-    return render_template(
-        "index.html",
-        active_tab=active_tab,
-        user=user,
-        avatars=AVATAR_ANIMALS,
-        avatar_map=_avatar_map(),
-        questions=QUESTIONS,
-        track_options=TRACK_OPTIONS,
-        grade_options=GRADE_OPTIONS,
-        sms_code=session.get("sms_code", "2026"),
-        auth_error=None,
-        notice="Тест пройден — разбор сформирован и сохранён.",
-        result=analysis,
-        recent=recent,
-        user_assessments=user_assessments,
-        expanded_assessment=None,
-        guidance=guidance,
-        joined_room=joined_room,
-        teacher_room=teacher_room,
-        classroom_students=classroom_students,
-        form_data={
-            "student_name": student_name,
-            "grade": grade,
-            "track_goal": track_goal,
-            "open_answer": open_answer,
-            "answers": answers_map,
-        },
-    )
+    session["last_result"] = analysis
+    session["notice"] = "Тест пройден — отчёт сформирован."
+    return redirect(url_for("result_page"))
 
 
 @app.route("/clear-history", methods=["POST"])
 def clear_history():
     clear_assessments()
     session["notice"] = "Журнал прохождений очищен."
-    return redirect(url_for("index"))
+    return redirect(url_for("history_page"))
 
 
 if __name__ == "__main__":
