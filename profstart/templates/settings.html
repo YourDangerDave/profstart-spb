@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Настройки — Профстарт СПб{% endblock %}
+
+{% block content %}
+<section class="card">
+  <span class="eyebrow">Персонализация</span>
+  <h2>Настройки личного кабинета</h2>
+  <form action="{{ url_for('save_profile_settings') }}" method="POST" class="form-stack">
+    <div class="field">
+      <span>Выбери аватарку-животное</span>
+      <div class="avatar-picker">
+        {% for av in avatars %}
+          <label class="avatar-choice">
+            <input
+              type="radio"
+              name="avatar_id"
+              value="{{ av.id }}"
+              {% if user.avatar_id == av.id %}checked{% endif %}
+            />
+            <span>{{ av.emoji }} {{ av.label }}</span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="row-3">
+      <label class="field">
+        <span>Имя</span>
+        <input type="text" name="full_name" value="{{ user.full_name }}" required />
+      </label>
+      <label class="field">
+        <span>Личная почта</span>
+        <input type="email" name="email" value="{{ user.email or '' }}" placeholder="name@example.com" />
+      </label>
+      <label class="field">
+        <span>Класс / ступень</span>
+        <select name="grade">
+          {% for g in grade_options %}
+            <option value="{{ g }}" {% if user.grade == g %}selected{% endif %}>{{ g }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    {% if user.role == 'student' %}
+      <label class="field">
+        <span>Куда метишь пока?</span>
+        <select name="track_goal">
+          {% for opt in track_options %}
+            <option value="{{ opt }}" {% if user.track_goal == opt %}selected{% endif %}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    {% endif %}
+
+    <label class="checkbox-field">
+      <input type="checkbox" name="notify_updates" {% if user.notify_updates %}checked{% endif %} />
+      <span>Показывать подсказки по новым направлениям и обновлениям разбора</span>
+    </label>
+
+    <button type="submit" class="btn btn-primary">Сохранить настройки</button>
+  </form>
+</section>
+{% endblock %}
