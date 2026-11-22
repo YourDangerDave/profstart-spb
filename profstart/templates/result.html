@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Результат диагностики — Профстарт СПб{% endblock %}
+
+{% block content %}
+<section class="card result-card">
+  <div class="result-header">
+    <span class="tag">Разбор готов</span>
+    <h2>Больше всего откликается: {{ result.top_profile.title }} ({{ result.top_profile.percent }}%)</h2>
+  </div>
+  <p class="summary-text">{{ result.summary }}</p>
+
+  <div class="portrait-box">
+    <h3>Что это говорит о твоём характере</h3>
+    <p>{{ result.personality_portrait }}</p>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-box">
+      <h3>Как это устроено в Петербурге</h3>
+      <p>{{ result.top_profile.spb_focus }}</p>
+    </div>
+    <div class="info-box info-box-alt">
+      <h3>Если смотреть на «{{ result.track_goal }}»</h3>
+      <p>{{ result.top_profile.track_tip }}</p>
+    </div>
+  </div>
+
+  <div class="uni-section">
+    <h3>ВУЗы Санкт-Петербурга и примерные направления</h3>
+    <div class="uni-grid">
+      {% for uni in result.top_profile.universities %}
+        <div class="uni-card">
+          <strong>{{ uni.name }}</strong>
+          <p>{{ uni.programs }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if result.full_advice %}
+  <div class="advice-box">
+    <h3>Практические советы</h3>
+    <ul class="advice-list">
+      {% for tip in result.full_advice %}
+        <li>{{ tip }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="roles-wrap">
+    <h3>Кем можно работать в этом направлении</h3>
+    <div class="chips">
+      {% for role in result.top_profile.roles %}
+        <span class="chip">{{ role }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="bars">
+    <h3>Как распределились все 5 направлений</h3>
+    {% for item in result.breakdown %}
+      <div class="bar-row">
+        <div class="bar-label">
+          <span>{{ item.title }}</span>
+          <strong>{{ item.percent }}%</strong>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width: {{ item.percent }}%;"></div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="inline-row">
+    <a href="{{ url_for('test_page') }}" class="btn btn-small">Пройти тест заново</a>
+    {% if user %}
+      <a href="{{ url_for('cabinet') }}" class="btn btn-primary">Открыть личный кабинет</a>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
