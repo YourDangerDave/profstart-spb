@@ -351,7 +351,7 @@ def analyze():
         user.get("classroom_code") if (user and not is_guest and user["role"] == "student") else None
     )
 
-    save_assessment(
+    assessment_id = save_assessment(
         student_name=student_name,
         grade=f"{grade} · {track_goal}",
         open_answer=open_answer,
@@ -360,8 +360,8 @@ def analyze():
         classroom_code=room_code,
     )
 
-    session["last_result"] = analysis
-    session["notice"] = "Тест пройден — отчёт сформирован."
+    session["last_result_id"] = assessment_id
+    session["notice"] = "Тест успешно пройден! Персональный разбор и подборка вузов СПб готовы."
     return redirect(url_for("result_page"))
 
 
