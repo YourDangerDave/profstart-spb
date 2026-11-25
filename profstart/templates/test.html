@@ -82,4 +82,18 @@
     <button type="submit" class="btn btn-primary">Собрать разбор и подобрать вузы СПб</button>
   </form>
 </section>
+
+<script>
+  const testForm = document.querySelector('form[action="{{ url_for("analyze") }}"]');
+  if (testForm) {
+    testForm.addEventListener('submit', function () {
+      const btn = testForm.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Анализируем ответы и подбираем вузы СПб...';
+      }
+    });
+  }
+</script>
+
 {% endblock %}
