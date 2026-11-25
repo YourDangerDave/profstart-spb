@@ -202,11 +202,21 @@ def test_page():
 
 @app.route("/result", methods=["GET"])
 def result_page():
-    report_data = session.get("last_result")
-    if not report_data:
+    result_id = session.get("last_result_id")
+    if not result_id:
         return redirect(url_for("test_page"))
+
+    assessment = get_assessment_by_id(result_id)
+    if not assessment or not assessment.get("report"):
+        return redirect(url_for("test_page"))
+
     ctx = _common_context("result")
-    ctx.update({"result": report_data})
+    ctx.update(
+        {
+            "result": assessment["report"],
+            "assessment_meta": assessment,
+        }
+    )
     return render_template("result.html", **ctx)
 
 
