@@ -1,13 +1,12 @@
 import os
-import random
 from flask import Flask, render_template, request, redirect, url_for, session
 from ai_analyzer import analyze_student_profile
 from database import (
     AVATAR_ANIMALS,
     init_db,
-    normalize_phone,
+    normalize_login,
     get_user_by_id,
-    get_user_by_phone,
+    get_user_by_login,
     register_user,
     authenticate_user,
     update_user_settings,
@@ -70,8 +69,6 @@ def _avatar_map():
 
 def _common_context(active_page: str):
     user = _current_user()
-    if "sms_code" not in session:
-        session["sms_code"] = str(random.randint(1000, 9999))
     return {
         "active_page": active_page,
         "user": user,
@@ -79,7 +76,6 @@ def _common_context(active_page: str):
         "avatar_map": _avatar_map(),
         "track_options": TRACK_OPTIONS,
         "grade_options": GRADE_OPTIONS,
-        "sms_code": session.get("sms_code"),
         "auth_error": session.pop("auth_error", None),
         "notice": session.pop("notice", None),
     }
@@ -91,17 +87,80 @@ def index():
     return render_template("entry.html", **ctx)
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        login_val = request.form.get("login", "").strip()
+        password = request.form.get("password", "").strip()
+
+        user = authenticate_user(login=login_val, password=password)
+        if not user:
+            session["auth_error"] = "Неверный логин или пароль."
+            return redirect(url_for("login"))
+
+        session["user_id"] = user["id"]
+        role_label = "учителя" if user["role"] == "teacher" else "ученика"
+        session["notice"] = f"Вход выполнен в кабинет {role_label}: {user['full_name']}."
+        return redirect(url_for("cabinet"))
+
+    ctx = _common_context("login")
+    return render_template("login.html", **ctx)
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        login_val = normalize_login(request.form.get("login", ""))
+        password = request.form.get("password", "").strip()
+        password_confirm = request.form.get("password_confirm", "").strip()
+        role = request.form.get("role", "student").strip()
+
+        if len(login_val) < 3:
+            session["auth_error"] = "Логин должен содержать минимум 3 символа."
+            return redirect(url_for("register"))
+
+        if len(password) < 4:
+            session["auth_error"] = "Пароль должен быть не короче 4 символов."
+            return redirect(url_for("register"))
+
+        if password != password_confirm:
+            session["auth_error"] = "Пароли не совпадают."
+            return redirect(url_for("register"))
+
+        if get_user_by_login(login_val):
+            session["auth_error"] = f"Логин «{login_val}» уже занят. Выбери другой или войди."
+            return redirect(url_for("register"))
+
+        user = register_user(login=login_val, password=password, role=role, full_name=full_name)
+        session["user_id"] = user["id"]
+        role_label = "учителя" if user["role"] == "teacher" else "ученика"
+        session["notice"] = f"Создан аккаунт {role_label}: {user['full_name']} (@{user['login']})."
+        return redirect(url_for("cabinet"))
+
+    ctx = _common_context("register")
+    return render_template("register.html", **ctx)
+
+
 @app.route("/cabinet", methods=["GET"])
 def cabinet():
     user = _current_user()
     if not user:
         session["auth_error"] = "Сначала войди в аккаунт или пройди тест в гостевом режиме."
-        return redirect(url_for("index"))
+        return redirect(url_for("login"))
 
     expanded_id = request.args.get("open_result", type=int)
     user_assessments = get_user_assessments(user["id"], limit=20) if user["role"] == "student" else []
-    guidance = get_guidance_for_student(user["id"], user.get("classroom_code")) if user["role"] == "student" else None
-    joined_room = get_classroom_by_code(user.get("classroom_code")) if user["role"] == "student" else None
+    guidance = (
+        get_guidance_for_student(user["id"], user.get("classroom_code"))
+        if user["role"] == "student"
+        else None
+    )
+    joined_room = (
+        get_classroom_by_code(user.get("classroom_code"))
+        if user["role"] == "student"
+        else None
+    )
 
     teacher_room = get_teacher_classroom(user["id"]) if user["role"] == "teacher" else None
     classroom_students = get_classroom_students_overview(teacher_room["code"]) if teacher_room else []
@@ -156,7 +215,7 @@ def settings_page():
     user = _current_user()
     if not user:
         session["auth_error"] = "Настройки профиля доступны после входа в аккаунт."
-        return redirect(url_for("index"))
+        return redirect(url_for("login"))
     ctx = _common_context("settings")
     return render_template("settings.html", **ctx)
 
@@ -167,56 +226,6 @@ def history_page():
     ctx = _common_context("history")
     ctx.update({"recent": recent})
     return render_template("history.html", **ctx)
-
-
-@app.route("/register", methods=["POST"])
-def register():
-    full_name = request.form.get("full_name", "").strip()
-    phone = request.form.get("phone", "").strip()
-    password = request.form.get("password", "").strip()
-    role = request.form.get("role", "student").strip()
-    code = request.form.get("code", "").strip()
-    expected_code = session.get("sms_code", "")
-
-    clean_phone = normalize_phone(phone)
-    if len(clean_phone) < 8:
-        session["auth_error"] = "Введи корректный номер телефона."
-        return redirect(url_for("index"))
-
-    if len(password) < 4:
-        session["auth_error"] = "Пароль должен быть не короче 4 символов."
-        return redirect(url_for("index"))
-
-    if code and expected_code and code != expected_code:
-        session["auth_error"] = f"Неверный код подтверждения. Актуальный код: {expected_code}"
-        return redirect(url_for("index"))
-
-    if get_user_by_phone(clean_phone):
-        session["auth_error"] = f"Аккаунт с номером {clean_phone} уже существует. Используй форму входа."
-        return redirect(url_for("index"))
-
-    user = register_user(phone=clean_phone, password=password, role=role, full_name=full_name)
-    session["user_id"] = user["id"]
-    session["sms_code"] = str(random.randint(1000, 9999))
-    role_label = "учителя" if user["role"] == "teacher" else "ученика"
-    session["notice"] = f"Создан аккаунт {role_label}: {user['full_name']} ({user['phone']})."
-    return redirect(url_for("cabinet"))
-
-
-@app.route("/login", methods=["POST"])
-def login():
-    phone = request.form.get("phone", "").strip()
-    password = request.form.get("password", "").strip()
-
-    user = authenticate_user(phone=phone, password=password)
-    if not user:
-        session["auth_error"] = "Неверный телефон или пароль. Если аккаунта ещё нет — пройди регистрацию."
-        return redirect(url_for("index"))
-
-    session["user_id"] = user["id"]
-    role_label = "учителя" if user["role"] == "teacher" else "ученика"
-    session["notice"] = f"Вход выполнен в кабинет {role_label}: {user['full_name']}."
-    return redirect(url_for("cabinet"))
 
 
 @app.route("/logout", methods=["POST"])
@@ -230,7 +239,7 @@ def logout():
 def save_profile_settings():
     user = _current_user()
     if not user:
-        return redirect(url_for("index"))
+        return redirect(url_for("login"))
 
     update_user_settings(
         user_id=user["id"],
@@ -305,7 +314,9 @@ def analyze():
     default_name = user["full_name"] if (user and not is_guest) else "Гость из СПб"
     student_name = request.form.get("student_name", "").strip() or default_name
     grade = request.form.get("grade") or (user.get("grade") if (user and not is_guest) else "9 класс")
-    track_goal = request.form.get("track_goal") or (user.get("track_goal") if (user and not is_guest) else "пока изучаю варианты")
+    track_goal = request.form.get("track_goal") or (
+        user.get("track_goal") if (user and not is_guest) else "пока изучаю варианты"
+    )
     if track_goal not in TRACK_OPTIONS:
         track_goal = "пока изучаю варианты"
     open_answer = request.form.get("open_answer", "")
@@ -326,7 +337,9 @@ def analyze():
     )
 
     owner_id = user["id"] if (user and not is_guest) else None
-    room_code = user.get("classroom_code") if (user and not is_guest and user["role"] == "student") else None
+    room_code = (
+        user.get("classroom_code") if (user and not is_guest and user["role"] == "student") else None
+    )
 
     save_assessment(
         student_name=student_name,
