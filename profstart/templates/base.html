@@ -123,7 +123,8 @@
             <button type="submit" class="btn btn-small">Выйти</button>
           </form>
         {% else %}
-          <a href="{{ url_for('index') }}" class="btn btn-small">Вход / Регистрация</a>
+          <a href="{{ url_for('login') }}" class="btn btn-small">Вход</a>
+          <a href="{{ url_for('register') }}" class="btn btn-small">Регистрация</a>
         {% endif %}
       </div>
     </div>
@@ -133,6 +134,9 @@
       {% if user %}
         <a href="{{ url_for('cabinet') }}" class="nav-tab {% if active_page == 'cabinet' %}active{% endif %}">Личный кабинет</a>
         <a href="{{ url_for('settings_page') }}" class="nav-tab {% if active_page == 'settings' %}active{% endif %}">Настройки</a>
+      {% else %}
+        <a href="{{ url_for('login') }}" class="nav-tab {% if active_page == 'login' %}active{% endif %}">Вход</a>
+        <a href="{{ url_for('register') }}" class="nav-tab {% if active_page == 'register' %}active{% endif %}">Регистрация</a>
       {% endif %}
       <a href="{{ url_for('test_page') }}" class="nav-tab {% if active_page == 'test' %}active{% endif %}">Тестирование</a>
       {% if session.get('last_result') %}
