@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Регистрация — Профстарт СПб{% endblock %}
+
+{% block content %}
+<section class="card">
+  <span class="eyebrow">Новый аккаунт</span>
+  <h1>Регистрация на платформе</h1>
+  <p class="muted">Выберите роль, придумайте логин и пароль — после регистрации откроется личный кабинет.</p>
+
+  <form action="{{ url_for('register') }}" method="POST" class="form-stack">
+    <div class="row-2">
+      <label class="field">
+        <span>Роль</span>
+        <select name="role" required>
+          <option value="student">Ученик</option>
+          <option value="teacher">Учитель (классный руководитель)</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Имя / ФИО</span>
+        <input type="text" name="full_name" placeholder="Например, Анна Смирнова" required />
+      </label>
+    </div>
+
+    <div class="row-3">
+      <label class="field">
+        <span>Логин (от 3 символов)</span>
+        <input type="text" name="login" placeholder="Например, anna_9b" required />
+      </label>
+      <label class="field">
+        <span>Пароль (от 4 символов)</span>
+        <input type="password" name="password" placeholder="Придумайте пароль" required />
+      </label>
+      <label class="field">
+        <span>Повторите пароль</span>
+        <input type="password" name="password_confirm" placeholder="Ещё раз пароль" required />
+      </label>
+    </div>
+
+    <div class="inline-row">
+      <button type="submit" class="btn btn-primary">Создать аккаунт</button>
+      <a href="{{ url_for('login') }}" class="btn btn-small">Уже есть аккаунт? Войти</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
