@@ -6,7 +6,12 @@ import sqlite3
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-DB_PATH = Path(__file__).resolve().parent / "profstart.db"
+_default_db = (
+    Path("/tmp/profstart.db")
+    if os.environ.get("RENDER")
+    else (Path(__file__).resolve().parent / "profstart.db")
+)
+DB_PATH = Path(os.environ.get("DB_PATH", str(_default_db)))
 
 AVATAR_ANIMALS = [
     {"id": "fox", "label": "Лиса", "emoji": "🦊"},
@@ -19,28 +24,30 @@ AVATAR_ANIMALS = [
 
 
 def _hash_password(password: str, salt: Optional[str] = None) -> str:
-    clean_pw = password or "1234"
+    clean_pw = password or ""
     use_salt = salt or os.urandom(8).hex()
-    digest = hashlib.pbkdf2_hmac("sha256", clean_pw.encode("utf-8"), use_salt.encode("utf-8"), 100_000).hex()
+    digest = hashlib.pbkdf2_hmac(
+        "sha256", clean_pw.encode("utf-8"), use_salt.encode("utf-8"), 100_000
+    ).hex()
     return f"{use_salt}${digest}"
 
 
 def _verify_password(password: str, stored: Optional[str]) -> bool:
     if not stored or "$" not in stored:
-        return True
+        return False
     salt, expected = stored.split("$", 1)
-    actual = hashlib.pbkdf2_hmac("sha256", (password or "").encode("utf-8"), salt.encode("utf-8"), 100_000).hex()
+    actual = hashlib.pbkdf2_hmac(
+        "sha256", (password or "").encode("utf-8"), salt.encode("utf-8"), 100_000
+    ).hex()
     return actual == expected
 
 
-def normalize_phone(phone: str) -> str:
-    digits = "".join(ch for ch in (phone or "") if ch.isdigit())
-    if len(digits) == 11 and digits.startswith("8"):
-        digits = "7" + digits[1:]
-    return f"+{digits}" if digits else ""
+def normalize_login(login: str) -> str:
+    return (login or "").strip().lower()
 
 
 def get_connection() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
@@ -52,7 +59,7 @@ def init_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                phone TEXT UNIQUE NOT NULL,
+                login TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 role TEXT NOT NULL CHECK(role IN ('student', 'teacher')),
                 full_name TEXT NOT NULL,
@@ -121,17 +128,17 @@ def get_user_by_id(user_id: Optional[int]) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
-def get_user_by_phone(phone: str) -> Optional[Dict[str, Any]]:
-    clean_phone = normalize_phone(phone)
-    if not clean_phone:
+def get_user_by_login(login: str) -> Optional[Dict[str, Any]]:
+    clean_login = normalize_login(login)
+    if not clean_login:
         return None
     with get_connection() as conn:
-        row = conn.execute("SELECT * FROM users WHERE phone = ?", (clean_phone,)).fetchone()
+        row = conn.execute("SELECT * FROM users WHERE login = ?", (clean_login,)).fetchone()
     return dict(row) if row else None
 
 
-def register_user(phone: str, password: str, role: str, full_name: str) -> Dict[str, Any]:
-    clean_phone = normalize_phone(phone)
+def register_user(login: str, password: str, role: str, full_name: str) -> Dict[str, Any]:
+    clean_login = normalize_login(login)
     clean_role = "teacher" if role == "teacher" else "student"
     clean_name = (full_name or "").strip() or (
         "Классный руководитель" if clean_role == "teacher" else "Ученик СПб"
@@ -142,18 +149,18 @@ def register_user(phone: str, password: str, role: str, full_name: str) -> Dict[
     with get_connection() as conn:
         cursor = conn.execute(
             """
-            INSERT INTO users (phone, password_hash, role, full_name, avatar_id)
+            INSERT INTO users (login, password_hash, role, full_name, avatar_id)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (clean_phone, pw_hash, clean_role, clean_name, default_avatar),
+            (clean_login, pw_hash, clean_role, clean_name, default_avatar),
         )
         conn.commit()
         row = conn.execute("SELECT * FROM users WHERE id = ?", (cursor.lastrowid,)).fetchone()
         return dict(row)
 
 
-def authenticate_user(phone: str, password: str) -> Optional[Dict[str, Any]]:
-    user = get_user_by_phone(phone)
+def authenticate_user(login: str, password: str) -> Optional[Dict[str, Any]]:
+    user = get_user_by_login(login)
     if not user:
         return None
     if not _verify_password(password, user.get("password_hash")):
