@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Вход — Профстарт СПб{% endblock %}
+
+{% block content %}
+<section class="card">
+  <span class="eyebrow">Авторизация</span>
+  <h1>Вход в аккаунт</h1>
+  <p class="muted">Введите ваш логин и пароль, указанные при регистрации.</p>
+
+  <form action="{{ url_for('login') }}" method="POST" class="form-stack">
+    <div class="row-2">
+      <label class="field">
+        <span>Логин</span>
+        <input type="text" name="login" placeholder="Например: ivan_spb" required autofocus />
+      </label>
+      <label class="field">
+        <span>Пароль</span>
+        <input type="password" name="password" placeholder="Введите пароль" required />
+      </label>
+    </div>
+
+    <div class="inline-row">
+      <button type="submit" class="btn btn-primary">Войти</button>
+      <a href="{{ url_for('register') }}" class="btn btn-small">Нет аккаунта? Зарегистрироваться</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
