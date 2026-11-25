@@ -2,6 +2,22 @@
 {% block title %}Результат диагностики — Профстарт СПб{% endblock %}
 
 {% block content %}
+
+<section class="completion-banner" role="status">
+  <div class="completion-icon" aria-hidden="true">✓</div>
+  <div>
+    <strong>Тест пройден! Разбор сформирован</strong>
+    <p>
+      Профиль для <b>{{ assessment_meta.student_name }}</b> готов
+      {% if user and assessment_meta.user_id %}
+        и сохранён в твоём личном кабинете{% if user.classroom_code %} (виден классному руководителю){% endif %}.
+      {% else %}
+        (гостевой режим — можешь изучить рекомендации ниже или зарегистрироваться, чтобы сохранить историю).
+      {% endif %}
+    </p>
+  </div>
+</section>
+
 <section class="card result-card">
   <div class="result-header">
     <span class="tag">Разбор готов</span>
